@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Result Processing System (SQLite Version)</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.6.2/sql-wasm.js"></script>
+<style>
+  /* --- GLOBAL STYLES --- */
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: linear-gradient(135deg, #007bff, #00c6ff);
+    margin: 0;
+    padding: 20px;
+    color: #333;
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  .container {
+    max-width: 1000px;
+    margin: 30px auto;
+    background: #fff;
+    padding: 30px 40px;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .container::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(to right, #007bff, #00c6ff);
+  }
+
+  h2, h3 {
+    text-align: center;
+    color: #007bff;
+    margin-bottom: 20px;
+  }
+
+  h2 {
+    font-size: 28px;
+    margin-top: 0;
+    position: relative;
+    padding-bottom: 10px;
+  }
+
+  h2::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 3px;
+    background: linear-gradient(to right, #007bff, #00c6ff);
+    border-radius: 3px;
+  }
+
+  h3 {
+    font-size: 22px;
+  }
+
+  h4 {
+    color: #007bff;
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 18px;
+    position: relative;
+    padding-bottom: 8px;
+  }
+
+  h4::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 40px;
+    height: 2px;
+    background: #007bff;
+  }
+
+  input, select, button {
+    padding: 12px 15px;
+    margin: 8px 0;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    width: 100%;
+  }
+
+  input:focus, select:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+  }
+
+  button {
+    background: #007bff;
+    color: white;
+    cursor: pointer;
+    border: none;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  button:hover {
+    background: #0056b3;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  button:active {
+    transform: translateY(0);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  th, td {
+    border: 1px solid #e0e0e0;
+    padding: 12px 10px;
+    text-align: center;
+  }
+
+  th {
+    background: #007bff;
+    color: white;
+    font-weight: 600;
+  }
+
+  tr:nth-child(even) {
+    background-color: #f8f9fa;
+  }
+
+  tr:hover {
+    background-color: #e9f4ff;
+  }
+
+  #gpa {
+    text-align: center;
+    font-weight: bold;
+    margin-top: 20px;
+    color: #007bff;
+    background: #e9f4ff;
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 18px;
+    display: none;
+    border-left: 4px solid #007bff;
+  }
+
+  .hidden {
+    display: none;
+  }
+
+  /* --- LOGIN STYLES --- */
+  .login-card {
+    text-align: center;
+    padding: 30px;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+
+  .login-card select, .login-card input {
+    width: 100%;
+    max-width: 300px;
+    display: block;
+    margin: 10px auto;
+  }
+
+  .login-card button {
+    width: 100%;
+    max-width: 300px;
+    margin-top: 15px;
+    padding: 12px;
+  }
+
+  /* --- ADMIN PANEL --- */
+  .admin-panel {
+    padding: 20px;
+  }
+
+  .admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+
+  .logout-btn {
+    background: #ff4d4d;
+    color: white;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.3s;
+    width: auto;
+  }
+
+  .logout-btn:hover {
+    background: #cc0000;
+    transform: translateY(-2px);
+  }
+
+  .admin-sections {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+    gap: 25px;
+    margin-top: 25px;
+  }
+
+  .admin-card {
+    background: #f9fbff;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    padding: 20px 25px;
+    transition: 0.3s;
+    border: 1px solid #e6f0ff;
+  }
+
+  .admin-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+  }
+
+  .primary-btn {
+    width: 100%;
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    margin-top: 15px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.3s;
+  }
+
+  .primary-btn:hover {
+    background: #0056b3;
+  }
+
+  /* --- STUDENT PANEL --- */
+  .student-panel {
+    padding: 20px;
+  }
+
+  .student-panel button {
+    margin-top: 10px;
+  }
+
+  #viewForm {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 15px;
+    margin-bottom: 20px;
+    align-items: end;
+  }
+
+  #viewForm button {
+    height: fit-content;
+  }
+
+  /* --- RESPONSIVE DESIGN --- */
+  @media (max-width: 768px) {
+    .container {
+      padding: 20px;
+      margin: 15px auto;
+    }
+    
+    .admin-sections {
+      grid-template-columns: 1fr;
+    }
+    
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .admin-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    .admin-header h3 {
+      margin-bottom: 0;
+    }
+    
+    #viewForm {
+      grid-template-columns: 1fr;
+    }
+    
+    table {
+      font-size: 14px;
+    }
+    
+    th, td {
+      padding: 8px 5px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .container {
+      padding: 15px;
+    }
+    
+    h2 {
+      font-size: 24px;
+    }
+    
+    h3 {
+      font-size: 20px;
+    }
+    
+    .admin-card {
+      padding: 15px;
+    }
+    
+    input, select, button {
+      padding: 10px 12px;
+    }
+  }
+
+  /* --- ANIMATIONS --- */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .admin-card, .login-card, .student-panel {
+    animation: fadeIn 0.5s ease-out;
+  }
+
+  /* --- STATUS MESSAGES --- */
+  .status-message {
+    padding: 10px 15px;
+    border-radius: 6px;
+    margin: 10px 0;
+    text-align: center;
+    font-weight: 500;
+  }
+
+  .success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+  }
+
+  .error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+  }
+
+  /* --- LOADING INDICATOR --- */
+  .loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255,255,255,.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+    margin-right: 10px;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+</style>
+</head>
+
+<body>
+<div class="container">
+  <h2>Student Result Processing System</h2>
+
+  <!-- LOGIN SECTION -->
+  <div id="loginSection">
+    <div class="login-card">
+      <h3>Login</h3>
+      <select id="loginType">
+        <option value="admin">Admin</option>
+        <option value="student">Student</option>
+      </select>
+      <input type="text" id="loginUser" placeholder="Username or Student ID">
+      <input type="password" id="loginPass" placeholder="Password">
+      <button onclick="login()">Login</button>
+    </div>
+  </div>
+
+  <!-- ADMIN DASHBOARD -->
+  <div id="adminPanel" class="hidden admin-panel">
+    <div class="admin-header">
+      <h3>Admin Dashboard</h3>
+      <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+    <hr>
+
+    <div class="admin-sections">
+      <!-- LEFT: Add Student -->
+      <section class="admin-card">
+        <h4>Add Student</h4>
+        <form id="form">
+          <div class="form-grid">
+            <input type="text" id="studentId" placeholder="Student ID" required>
+            <input type="text" id="name" placeholder="Name" required>
+            <input type="text" id="department" placeholder="Department" required>
+            <input type="text" id="session" placeholder="Session" required>
+            <input type="text" id="semester" placeholder="Semester" required>
+            <input type="password" id="studentPassword" placeholder="Student Password" required>
+          </div>
+          <button type="button" class="primary-btn" onclick="addStudent()">➕ Add Student</button>
+        </form>
+      </section>
+
+      <!-- RIGHT: Add Result -->
+      <section class="admin-card">
+        <h4>Add Result</h4>
+        <form id="resultForm">
+          <div class="form-grid">
+            <input type="text" id="studentIdRes" placeholder="Student ID" required>
+            <input type="text" id="courseCode" placeholder="Course Code" required>
+            <input type="number" id="assignment" placeholder="Assignment" required>
+            <input type="number" id="classTest" placeholder="Class Test" required>
+            <input type="number" id="midterm" placeholder="Midterm" required>
+            <input type="number" id="finalExam" placeholder="Final" required>
+            <input type="text" id="semesterRes" placeholder="Semester" required>
+          </div>
+          <button type="button" class="primary-btn" onclick="addResult()">📊 Add Result</button>
+        </form>
+      </section>
+    </div>
+  </div>
+
+  <!-- STUDENT PANEL -->
+  <div id="studentPanel" class="hidden student-panel">
+    <div class="admin-header">
+      <h3>View Your Result</h3>
+      <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+    
+    <form id="viewForm">
+      <input type="text" id="viewStudentId" readonly>
+      <input type="text" id="viewSemester" placeholder="Semester" required>
+      <button type="button" class="primary-btn" onclick="viewResult()">View Result</button>
+    </form>
+
+    <table id="resultTable" style="display:none;">
+      <thead>
+        <tr>
+          <th>Course Code</th>
+          <th>Assignment</th>
+          <th>Class Test</th>
+          <th>Midterm</th>
+          <th>Final</th>
+          <th>Total</th>
+          <th>Grade</th>
+        </tr>
+      </thead>
+      <tbody id="resultBody"></tbody>
+    </table>
+
+    <div id="gpa"></div>
+  </div>
+</div>
+
+<script>
+let db;
+let currentUser = null;
+
+initDb();
+
+async function initDb() {
+  const SQL = await initSqlJs({
+    locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.6.2/${file}`
+  });
+  db = new SQL.Database();
+
+  db.run(`CREATE TABLE IF NOT EXISTS admin (
+    username TEXT PRIMARY KEY,
+    password TEXT
+  );`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS students (
+    student_id TEXT PRIMARY KEY,
+    name TEXT,
+    department TEXT,
+    session TEXT,
+    semester TEXT,
+    password TEXT
+  );`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS results (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id TEXT,
+    course_code TEXT,
+    semester TEXT,
+    assignment INTEGER,
+    class_test INTEGER,
+    midterm INTEGER,
+    final_exam INTEGER
+  );`);
+
+  // Default admin user
+  db.run(`INSERT OR IGNORE INTO admin VALUES ('admin', '1234');`);
+}
+
+function login() {
+  const type = document.getElementById("loginType").value;
+  const user = document.getElementById("loginUser").value;
+  const pass = document.getElementById("loginPass").value;
+
+  if (!user || !pass) {
+    alert("Please enter both username and password");
+    return;
+  }
+
+  if (type === "admin") {
+    const stmt = db.prepare("SELECT * FROM admin WHERE username=? AND password=?");
+    stmt.bind([user, pass]);
+    if (stmt.step()) {
+      currentUser = { type: "admin", username: user };
+      document.getElementById("loginSection").classList.add("hidden");
+      document.getElementById("adminPanel").classList.remove("hidden");
+      alert("Admin login successful!");
+    } else {
+      alert("Invalid admin credentials");
+    }
+  } else {
+    const stmt = db.prepare("SELECT * FROM students WHERE student_id=? AND password=?");
+    stmt.bind([user, pass]);
+    if (stmt.step()) {
+      currentUser = { type: "student", id: user };
+      document.getElementById("loginSection").classList.add("hidden");
+      document.getElementById("studentPanel").classList.remove("hidden");
+      document.getElementById("viewStudentId").value = user;
+      alert("Student login successful!");
+    } else {
+      alert("Invalid student credentials");
+    }
+  }
+}
+
+function logout() {
+  currentUser = null;
+  document.getElementById("loginSection").classList.remove("hidden");
+  document.getElementById("adminPanel").classList.add("hidden");
+  document.getElementById("studentPanel").classList.add("hidden");
+  
+  // Clear form fields
+  document.getElementById("loginUser").value = "";
+  document.getElementById("loginPass").value = "";
+  document.getElementById("viewSemester").value = "";
+  document.getElementById("resultTable").style.display = "none";
+  document.getElementById("gpa").style.display = "none";
+}
+
+function addStudent() {
+  const id = document.getElementById("studentId").value;
+  const name = document.getElementById("name").value;
+  const dept = document.getElementById("department").value;
+  const session = document.getElementById("session").value;
+  const sem = document.getElementById("semester").value;
+  const pass = document.getElementById("studentPassword").value;
+
+  if (!id || !name || !dept || !session || !sem || !pass) {
+    alert("Please fill all fields!");
+    return;
+  }
+
+  try {
+    db.run("INSERT INTO students VALUES (?, ?, ?, ?, ?, ?)", [id, name, dept, session, sem, pass]);
+    alert("Student added successfully!");
+    
+    // Clear form
+    document.getElementById("studentId").value = "";
+    document.getElementById("name").value = "";
+    document.getElementById("department").value = "";
+    document.getElementById("session").value = "";
+    document.getElementById("semester").value = "";
+    document.getElementById("studentPassword").value = "";
+  } catch (e) {
+    alert("Error adding student: " + e.message);
+  }
+}
+
+function addResult() {
+  const id = document.getElementById("studentIdRes").value;
+  const course = document.getElementById("courseCode").value;
+  const assign = parseInt(document.getElementById("assignment").value);
+  const ct = parseInt(document.getElementById("classTest").value);
+  const mid = parseInt(document.getElementById("midterm").value);
+  const fin = parseInt(document.getElementById("finalExam").value);
+  const sem = document.getElementById("semesterRes").value;
+
+  if (!id || !course || !sem) {
+    alert("Please fill all required fields!");
+    return;
+  }
+
+  // Validate marks (0-100)
+  if (assign < 0 || assign > 100 || ct < 0 || ct > 100 || mid < 0 || mid > 100 || fin < 0 || fin > 100) {
+    alert("All marks must be between 0 and 100");
+    return;
+  }
+
+  try {
+    db.run("INSERT INTO results (student_id, course_code, semester, assignment, class_test, midterm, final_exam) VALUES (?, ?, ?, ?, ?, ?, ?)",
+           [id, course, sem, assign, ct, mid, fin]);
+
+    alert("Result added successfully!");
+    
+    // Clear form
+    document.getElementById("studentIdRes").value = "";
+    document.getElementById("courseCode").value = "";
+    document.getElementById("assignment").value = "";
+    document.getElementById("classTest").value = "";
+    document.getElementById("midterm").value = "";
+    document.getElementById("finalExam").value = "";
+    document.getElementById("semesterRes").value = "";
+  } catch (e) {
+    alert("Error adding result: " + e.message);
+  }
+}
+
+function viewResult() {
+  const id = document.getElementById("viewStudentId").value;
+  const sem = document.getElementById("viewSemester").value;
+  
+  if (!sem) {
+    alert("Please enter a semester");
+    return;
+  }
+
+  const stmt = db.prepare("SELECT * FROM results WHERE student_id = ? AND semester = ?");
+  stmt.bind([id, sem]);
+
+  const tbody = document.getElementById("resultBody");
+  tbody.innerHTML = "";
+  let rows = [];
+  while (stmt.step()) {
+    rows.push(stmt.getAsObject());
+  }
+
+  if (rows.length === 0) {
+    alert("No records found for the selected semester!");
+    document.getElementById("resultTable").style.display = "none";
+    document.getElementById("gpa").style.display = "none";
+    return;
+  }
+
+  let totalGPA = 0;
+  rows.forEach(r => {
+    const total = r.assignment + r.class_test + r.midterm + r.final_exam;
+    let grade, gpa;
+    if (total >= 80) { grade = "A+"; gpa = 4.0; }
+    else if (total >= 70) { grade = "A"; gpa = 3.5; }
+    else if (total >= 60) { grade = "B"; gpa = 3.0; }
+    else if (total >= 50) { grade = "C"; gpa = 2.5; }
+    else { grade = "F"; gpa = 0.0; }
+    totalGPA += gpa;
+    tbody.innerHTML += `
+      <tr>
+        <td>${r.course_code}</td>
+        <td>${r.assignment}</td>
+        <td>${r.class_test}</td>
+        <td>${r.midterm}</td>
+        <td>${r.final_exam}</td>
+        <td>${total}</td>
+        <td>${grade}</td>
+      </tr>`;
+  });
+
+  document.getElementById("resultTable").style.display = "table";
+  const avg = (totalGPA / rows.length).toFixed(2);
+  document.getElementById("gpa").style.display = "block";
+  document.getElementById("gpa").innerText = "Semester GPA: " + avg;
+}
+</script>
+</body>
+</html>
